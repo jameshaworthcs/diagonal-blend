@@ -3,3 +3,4 @@
 pub mod color;
 pub mod exif;
 pub mod geometry;
+pub mod icc;
