@@ -8,3 +8,8 @@ pub mod geometry;
 pub mod icc;
 pub mod scene;
 pub mod timeline;
+
+#[cfg(target_arch = "wasm32")]
+mod render;
+#[cfg(target_arch = "wasm32")]
+mod wasm;
