@@ -6,4 +6,5 @@ pub mod encode;
 pub mod exif;
 pub mod geometry;
 pub mod icc;
+pub mod scene;
 pub mod timeline;
