@@ -134,7 +134,9 @@ impl Scene {
         if self.soft { self.feather } else { 0.0 }
     }
 
-    pub fn uniforms(&self, t: &Target, out: Space, bg_srgb: [f64; 3], time: Option<f64>) -> Uniforms {
+    /// `placeholder` draws soft stripes where a photo is missing or does not
+    /// reach (the preview); exports get the plain background.
+    pub fn uniforms(&self, t: &Target, out: Space, bg_srgb: [f64; 3], time: Option<f64>, placeholder: bool) -> Uniforms {
         let s = t.width.min(t.height);
         let split = self.split_at(time);
         let n = split.normal();
@@ -153,7 +155,7 @@ impl Scene {
             color_a: color(0),
             color_b: color(1),
             line: [n.x as f32, n.y as f32, k as f32, (self.feather_width() * s / 2.0) as f32],
-            bg: [bg[0] as f32, bg[1] as f32, bg[2] as f32, 1.0],
+            bg: [bg[0] as f32, bg[1] as f32, bg[2] as f32, placeholder as u8 as f32],
             target: [
                 t.tile_w as f32,
                 t.tile_h as f32,
@@ -470,8 +472,8 @@ mod tests {
         let a = s.pixel_to_texture(1, &whole).apply(v2(600.5, 300.5));
         let b = s.pixel_to_texture(1, &tile).apply(v2(88.5, 44.5));
         assert!((a - b).len() < 1e-12);
-        let uw = s.uniforms(&whole, Space::Srgb, [0.0; 3], None);
-        let ut = s.uniforms(&tile, Space::Srgb, [0.0; 3], None);
+        let uw = s.uniforms(&whole, Space::Srgb, [0.0; 3], None, true);
+        let ut = s.uniforms(&tile, Space::Srgb, [0.0; 3], None, true);
         let d = |u: &Uniforms, x: f32, y: f32| u.line[0] * x + u.line[1] * y + u.line[2];
         assert!((d(&uw, 600.5, 300.5) - d(&ut, 88.5, 44.5)).abs() < 1e-3);
     }
@@ -481,10 +483,10 @@ mod tests {
         let mut s = scene();
         s.set_soft(true);
         s.set_feather(0.1);
-        let u = s.uniforms(&Target::whole(2000.0, 1000.0), Space::Srgb, [0.0; 3], None);
+        let u = s.uniforms(&Target::whole(2000.0, 1000.0), Space::Srgb, [0.0; 3], None, true);
         assert!((u.line[3] - 50.0).abs() < 1e-4);
         s.set_soft(false);
-        let u = s.uniforms(&Target::whole(2000.0, 1000.0), Space::Srgb, [0.0; 3], None);
+        let u = s.uniforms(&Target::whole(2000.0, 1000.0), Space::Srgb, [0.0; 3], None, true);
         assert_eq!(u.line[3], 0.0);
     }
 

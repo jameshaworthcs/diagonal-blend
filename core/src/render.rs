@@ -445,7 +445,7 @@ impl Renderer {
         };
         let view = frame.texture.create_view(&Default::default());
         let target = Target::whole(self.config.width as f64, self.config.height as f64);
-        let u = scene.uniforms(&target, self.preview_space, bg, time);
+        let u = scene.uniforms(&target, self.preview_space, bg, time, true);
         let cmd = self.draw(&view, self.config.format, &u);
         self.queue.submit([cmd]);
         self.queue.present(frame);
@@ -478,7 +478,7 @@ impl Renderer {
                     tile_w: tw as f64,
                     tile_h: th as f64,
                 };
-                let u = scene.uniforms(&target, space, bg, time);
+                let u = scene.uniforms(&target, space, bg, time, false);
                 let (buffer, padded, device) = {
                     let mut r = this.borrow_mut();
                     r.encode_tile(&u, tw, th)
