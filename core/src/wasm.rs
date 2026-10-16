@@ -108,6 +108,17 @@ pub fn detect_color_space(bytes: &[u8]) -> i32 {
     crate::icc::detect(bytes).code()
 }
 
+/// A label for the photo's colour: "sRGB", "Display P3", "untagged" or
+/// "other" (converted to sRGB by the browser).
+#[wasm_bindgen]
+pub fn describe_color(bytes: &[u8]) -> String {
+    match crate::icc::detect(bytes) {
+        crate::icc::Detected::Untagged => "untagged".into(),
+        crate::icc::Detected::Known(space) => space.name().into(),
+        crate::icc::Detected::Other => "other".into(),
+    }
+}
+
 #[wasm_bindgen]
 pub fn encode_png(rgba: &[u8], width: u32, height: u32, space: u32) -> Result<Vec<u8>, JsValue> {
     crate::encode::png(rgba, width, height, Space::from_code(space)).map_err(|e| JsValue::from_str(&e))
