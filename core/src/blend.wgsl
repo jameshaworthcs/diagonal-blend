@@ -18,7 +18,7 @@ struct Uniforms {
     // Linear background colour; w > 0 draws stripes where a photo is missing.
     bg: vec4f,
     // (width, height, has A, has B) of the render target.
-    target: vec4f,
+    size: vec4f,
 }
 
 @group(0) @binding(0) var<uniform> u: Uniforms;
@@ -39,7 +39,7 @@ fn vs(@builtin(vertex_index) i: u32) -> VertexOut {
     let xy = vec2f(f32((i << 1u) & 2u), f32(i & 2u));
     var out: VertexOut;
     out.clip = vec4f(xy * 2.0 - 1.0, 0.0, 1.0);
-    out.px = vec2f(xy.x, 1.0 - xy.y) * u.target.xy;
+    out.px = vec2f(xy.x, 1.0 - xy.y) * u.size.xy;
     return out;
 }
 
@@ -84,8 +84,8 @@ fn fs(in: VertexOut) -> @location(0) vec4f {
     let ca = textureSample(tex_a, samp, uva).rgb;
     let cb = textureSample(tex_b, samp, uvb).rgb;
     let empty = placeholder(p);
-    let a = mix(empty, to_output(u.color_a, ca), inside(uva) * u.target.z);
-    let b = mix(empty, to_output(u.color_b, cb), inside(uvb) * u.target.w);
+    let a = mix(empty, to_output(u.color_a, ca), inside(uva) * u.size.z);
+    let b = mix(empty, to_output(u.color_b, cb), inside(uvb) * u.size.w);
 
     // Signed distance to the line, in output pixels.
     let d = dot(u.line.xy, p) + u.line.z;

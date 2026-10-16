@@ -68,7 +68,7 @@ pub struct Uniforms {
     /// a missing photo.
     pub bg: [f32; 4],
     /// (target width, target height, has A, has B).
-    pub target: [f32; 4],
+    pub size: [f32; 4],
 }
 
 fn rows(m: &Affine) -> [[f32; 4]; 2] {
@@ -156,7 +156,7 @@ impl Scene {
             color_b: color(1),
             line: [n.x as f32, n.y as f32, k as f32, (self.feather_width() * s / 2.0) as f32],
             bg: [bg[0] as f32, bg[1] as f32, bg[2] as f32, placeholder as u8 as f32],
-            target: [
+            size: [
                 t.tile_w as f32,
                 t.tile_h as f32,
                 self.images[0].is_some() as u8 as f32,
