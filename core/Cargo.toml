@@ -26,3 +26,6 @@ opt-level = "s"
 lto = true
 codegen-units = 1
 panic = "abort"
+
+[dev-dependencies]
+naga = { version = "30", features = ["wgsl-in", "glsl-out"] }

@@ -123,6 +123,7 @@ dependencies = [
  "console_error_panic_hook",
  "js-sys",
  "miniz_oxide 0.8.9",
+ "naga",
  "png",
  "wasm-bindgen",
  "wasm-bindgen-futures",
