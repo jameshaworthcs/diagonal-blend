@@ -165,6 +165,69 @@ impl Scene {
         }
     }
 
+    /// The part of the frame photo `i` has to fill: its side of the line,
+    /// widened by half the feather so the blend never shows a gap.
+    fn side_polygon(&self, i: usize) -> Vec<Vec2> {
+        let h = self.frame.half();
+        let reach = self.feather_width() / 2.0;
+        let mut split = self.split;
+        split.offset += if i == 0 { reach } else { -reach };
+        let mine = |q: Vec2| if i == 0 { split.distance(q) <= 0.0 } else { split.distance(q) >= 0.0 };
+        let mut poly: Vec<Vec2> = [v2(-h.x, -h.y), v2(h.x, -h.y), v2(h.x, h.y), v2(-h.x, h.y)]
+            .into_iter()
+            .filter(|&q| mine(q))
+            .collect();
+        if let Some((p0, p1)) = split.segment(&self.frame) {
+            poly.extend([p0, p1]);
+        }
+        poly
+    }
+
+    /// Does photo `i` reach every corner of its side? A missing photo
+    /// counts as covered.
+    pub fn side_covered(&self, i: usize) -> bool {
+        let Some(img) = self.images[i] else { return true };
+        let Some(inv) = self.place[i].image_to_frame(&self.frame, img.size).inverse() else { return false };
+        let eps = 1e-6 * img.size.x.max(img.size.y);
+        self.side_polygon(i).into_iter().all(|q| {
+            let u = inv.apply(q);
+            u.x >= -eps && u.y >= -eps && u.x <= img.size.x + eps && u.y <= img.size.y + eps
+        })
+    }
+
+    /// Grow both photos together about `centre` (by the least amount, up to
+    /// 4x) until each fills its own side. Scaling both about one point
+    /// keeps aligned eyes aligned and leaves a line through it unmoved.
+    fn cover_sides(&mut self, centre: Vec2) {
+        let covered = |s: &Scene| s.side_covered(0) && s.side_covered(1);
+        if covered(self) {
+            return;
+        }
+        let base = self.place;
+        let apply = |s: &mut Scene, k: f64| {
+            for i in 0..2 {
+                s.place[i] = base[i];
+                s.place[i].zoom_about(k, centre);
+            }
+        };
+        let (mut lo, mut hi) = (1.0_f64, 1.0_f64);
+        while !covered(self) {
+            if hi >= 4.0 {
+                self.place = base;
+                return;
+            }
+            lo = hi;
+            hi = (hi * 1.25).min(4.0);
+            apply(self, hi);
+        }
+        for _ in 0..24 {
+            let mid = (lo + hi) / 2.0;
+            apply(self, mid);
+            if covered(self) { hi = mid } else { lo = mid }
+        }
+        apply(self, hi);
+    }
+
     pub fn set_image_info(&mut self, i: usize, image: Option<Image>) {
         self.images[i] = image;
     }
@@ -377,6 +440,7 @@ impl Scene {
         self.place[1] = sim.compose(&self.place[1]);
         self.split = midline(a1, a2);
         self.split.clamp(&self.frame);
+        self.cover_sides((a1 + a2) * 0.5);
         true
     }
 
@@ -507,6 +571,40 @@ mod tests {
         let q = s.to_frame(mid[0], mid[1]);
         assert!(s.split.distance(q).abs() < 1e-9);
         assert!(!Scene::new().align(&ea, &eb));
+    }
+
+    #[test]
+    fn align_grows_both_photos_until_each_side_is_covered() {
+        let mut s = scene();
+        s.set_frame(1080.0, 1350.0);
+        s.set_image(0, 1280.0, 1600.0, 1, 0);
+        s.set_image(1, 1280.0, 1600.0, 1, 0);
+        // B's face is larger and higher: matching it to A shrinks B and
+        // would leave the right of the frame empty.
+        let ea = [0.42, 0.30, 0.55, 0.30];
+        let eb = [0.38, 0.22, 0.58, 0.22];
+        assert!(s.align(&ea, &eb));
+        assert!(s.side_covered(0) && s.side_covered(1));
+        assert!(s.placement(1)[2] >= 1.0 - 1e-6 || s.placement(0)[2] > 1.0);
+        // The eyes still coincide after the growth.
+        for k in [0, 2] {
+            let a = s.image_point_to_view(0, ea[k], ea[k + 1]);
+            let b = s.image_point_to_view(1, eb[k], eb[k + 1]);
+            assert!((a[0] - b[0]).abs() < 1e-6 && (a[1] - b[1]).abs() < 1e-6);
+        }
+    }
+
+    #[test]
+    fn feathered_sides_reach_past_the_line() {
+        let mut s = scene();
+        s.set_angle(0.0);
+        s.set_offset(0.0);
+        // A square photo pushed left so its right edge sits on the line.
+        s.set_placement(0, -0.5, 0.0, 1.0, 0.0);
+        assert!(s.side_covered(0));
+        s.set_soft(true);
+        s.set_feather(0.2);
+        assert!(!s.side_covered(0));
     }
 
     #[test]
