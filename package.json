@@ -1,0 +1,37 @@
+{
+  "name": "diagonal-blend",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Two photos, one seamless diagonal. Rust and WebGPU in the browser; nothing leaves the device.",
+  "license": "MIT",
+  "type": "module",
+  "scripts": {
+    "core": "sh scripts/build-core.sh",
+    "dev": "vite",
+    "build": "tsc --noEmit -p . && vite build",
+    "preview": "vite preview --port 4173 --strictPort",
+    "typecheck": "tsc --noEmit -p .",
+    "test:unit": "vitest run",
+    "test:e2e": "playwright test"
+  },
+  "devDependencies": {
+    "@playwright/test": "^1.64.1",
+    "@types/node": "^24.19.2",
+    "binaryen": "^132.0.0",
+    "typescript": "^7.0.2",
+    "vite": "^8.3.5",
+    "vite-plugin-pwa": "^2.0.0",
+    "vite-plugin-wasm": "^3.6.0",
+    "vitest": "^5.0.5",
+    "workbox-build": "^7.4.1",
+    "workbox-precaching": "^7.4.1",
+    "workbox-routing": "^7.4.1",
+    "workbox-strategies": "^7.4.1",
+    "workbox-window": "^7.4.1"
+  },
+  "dependencies": {
+    "@mediapipe/tasks-vision": "^1.1.1",
+    "mp4-muxer": "^5.2.2",
+    "webm-muxer": "^5.1.4"
+  }
+}
