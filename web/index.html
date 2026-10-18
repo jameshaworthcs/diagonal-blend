@@ -1,0 +1,261 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>diagonal blend</title>
+    <meta name="description" content="Composite two photos along a seamless diagonal, with one-tap face alignment. Runs entirely on your device; nothing is uploaded." />
+    <meta name="color-scheme" content="light dark" />
+    <meta name="theme-color" content="#f4f2ee" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#131316" media="(prefers-color-scheme: dark)" />
+    <link rel="icon" href="/icons/icon.svg" type="image/svg+xml" />
+    <link rel="apple-touch-icon" href="/icons/apple-touch-icon.png" />
+    <link rel="manifest" href="/manifest.webmanifest" />
+    <link rel="stylesheet" href="/css/base.css" />
+    <link rel="stylesheet" href="/css/app.css" />
+    <script>
+      // Apply a saved theme before first paint so there is no flash.
+      try {
+        const t = localStorage.getItem('theme');
+        if (t === 'light' || t === 'dark') document.documentElement.dataset.theme = t;
+      } catch {}
+    </script>
+  </head>
+  <body>
+    <a class="skip" href="#controls">Skip to controls</a>
+    <header class="bar">
+      <a class="brand" href="/" aria-label="diagonal blend, start over">
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true">
+          <clipPath id="mark-clip"><rect width="32" height="32" rx="7.5" /></clipPath>
+          <g clip-path="url(#mark-clip)">
+            <rect width="32" height="32" class="mark-a" />
+            <path d="M32 0V32H0z" class="mark-b" />
+          </g>
+          <path d="M28.2 3.8 3.8 28.2" class="mark-line" />
+        </svg>
+        <span>diagonal blend</span>
+      </a>
+      <p class="private" title="Photos never leave this device. The page is not allowed to connect anywhere else.">
+        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5.5 10h13v10h-13z" /></svg>
+        On-device. Nothing is uploaded.
+      </p>
+      <div class="bar-actions">
+        <button type="button" class="icon-btn" id="install" hidden>
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4v11m-4.5-4.5L12 15l4.5-4.5M5 19h14" /></svg>
+          <span>Install</span>
+        </button>
+        <button type="button" class="icon-btn" id="theme" aria-label="Theme: match the system">
+          <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3a9 9 0 1 0 0 18z" class="fill" /><circle cx="12" cy="12" r="9" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <main class="layout">
+      <section class="stage" id="stage" aria-label="Preview">
+        <div class="canvas-wrap" id="canvas-wrap">
+          <canvas id="canvas" role="img" aria-label="Blended preview"></canvas>
+          <svg class="overlay" id="overlay" aria-hidden="true">
+            <line id="guide" class="guide" />
+            <g id="eyes" class="eyes"></g>
+          </svg>
+          <div class="handle handle-pos" id="handle-pos" role="slider" tabindex="0" aria-label="Split position"
+            aria-valuemin="-100" aria-valuemax="100" aria-valuenow="0" aria-valuetext="centre" aria-orientation="horizontal" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M9 7 4 12l5 5M15 7l5 5-5 5" /></svg>
+          </div>
+          <div class="handle handle-rot" id="handle-rot" role="slider" tabindex="0" aria-label="Split angle"
+            aria-valuemin="-180" aria-valuemax="180" aria-valuenow="0" aria-valuetext="0 degrees" hidden>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M19 12a7 7 0 1 1-2.05-4.95M19 4v4h-4" /></svg>
+          </div>
+        </div>
+
+        <div class="empty" id="empty">
+          <div class="drop">
+            <svg class="drop-art" viewBox="0 0 120 90" aria-hidden="true">
+              <rect x="6" y="8" width="66" height="74" rx="8" class="art-a" />
+              <rect x="48" y="8" width="66" height="74" rx="8" class="art-b" />
+              <path d="M88 4 32 86" class="art-line" />
+            </svg>
+            <h1>Two photos, one seamless diagonal.</h1>
+            <p>Drop two photos here, paste them, or choose them below. Align two faces with one tap and export a still or an animated reveal.</p>
+            <div class="drop-actions">
+              <label class="btn primary">
+                <input type="file" accept="image/*" multiple id="pick-both" class="visually-hidden" />
+                Choose photos
+              </label>
+              <button type="button" class="btn" id="samples">Try the sample twins</button>
+            </div>
+            <p class="fine">Everything runs in this tab with WebGPU or WebGL2. Your photos never leave the device.</p>
+          </div>
+        </div>
+        <div class="drop-hint" id="drop-hint" aria-hidden="true"><span>Drop to load</span></div>
+      </section>
+
+      <aside class="panel" id="controls" aria-label="Controls" tabindex="-1">
+        <section class="group" aria-labelledby="h-photos">
+          <h2 id="h-photos">Photos</h2>
+          <div class="slots">
+            <div class="slot" id="slot-0" data-slot="0">
+              <div class="thumb"><span class="tag">A</span><img alt="" id="thumb-0" hidden /></div>
+              <div class="slot-meta">
+                <span class="slot-name" id="name-0">No photo yet</span>
+                <span class="slot-info" id="info-0"></span>
+                <span class="slot-actions">
+                  <label class="link"><input type="file" accept="image/*" class="visually-hidden" id="file-0" aria-label="Choose photo A" />Choose</label>
+                  <label class="link camera"><input type="file" accept="image/*" capture="environment" class="visually-hidden" id="camera-0" aria-label="Take photo A with the camera" />Camera</label>
+                </span>
+              </div>
+            </div>
+            <button type="button" class="icon-btn swap" id="swap" aria-label="Swap photos A and B" disabled>
+              <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 4v14m0 0-3-3m3 3 3-3M17 20V6m0 0-3 3m3-3 3 3" /></svg>
+            </button>
+            <div class="slot" id="slot-1" data-slot="1">
+              <div class="thumb"><span class="tag">B</span><img alt="" id="thumb-1" hidden /></div>
+              <div class="slot-meta">
+                <span class="slot-name" id="name-1">No photo yet</span>
+                <span class="slot-info" id="info-1"></span>
+                <span class="slot-actions">
+                  <label class="link"><input type="file" accept="image/*" class="visually-hidden" id="file-1" aria-label="Choose photo B" />Choose</label>
+                  <label class="link camera"><input type="file" accept="image/*" capture="environment" class="visually-hidden" id="camera-1" aria-label="Take photo B with the camera" />Camera</label>
+                </span>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="group" aria-labelledby="h-faces">
+          <h2 id="h-faces">Faces</h2>
+          <button type="button" class="btn primary wide" id="align" disabled>
+            <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="8.5" cy="10" r="1.6" class="fill" /><circle cx="15.5" cy="10" r="1.6" class="fill" /><path d="M12 3v18M4 6V4h2m12 0h2v2M4 18v2h2m12 0h2v-2" /></svg>
+            Align faces
+          </button>
+          <label class="check"><input type="checkbox" id="show-eyes" checked /> Show detected eyes</label>
+          <p class="note" id="faces-note">Finds the eyes in both photos, lines B's up with A's and splits down the middle of the face. The detector downloads once (about 14 MB) and then works offline.</p>
+        </section>
+
+        <section class="group" aria-labelledby="h-split">
+          <h2 id="h-split">Split</h2>
+          <div class="seg" role="radiogroup" aria-label="Edge">
+            <label><input type="radio" name="edge" value="hard" checked /><span>Hard edge</span></label>
+            <label><input type="radio" name="edge" value="soft" /><span>Soft blend</span></label>
+          </div>
+          <div class="field">
+            <label for="feather">Feather</label>
+            <input type="range" id="feather" min="0" max="50" step="0.5" value="8" disabled />
+            <output for="feather" id="feather-out">8%</output>
+          </div>
+          <div class="field">
+            <label for="angle">Angle</label>
+            <input type="range" id="angle" min="-180" max="180" step="0.5" value="28" />
+            <output for="angle" id="angle-out">28°</output>
+          </div>
+          <div class="field">
+            <label for="position">Position</label>
+            <input type="range" id="position" min="-100" max="100" step="0.5" value="0" />
+            <output for="position" id="position-out">0%</output>
+          </div>
+          <p class="note">Drag the line on the photo, or turn it with the round handle. Arrow keys work on both handles; hold Shift for bigger steps.</p>
+        </section>
+
+        <section class="group" aria-labelledby="h-adjust">
+          <h2 id="h-adjust">Adjust a photo</h2>
+          <div class="seg" role="radiogroup" aria-label="Photo to adjust">
+            <label><input type="radio" name="target" value="auto" checked /><span>Either side</span></label>
+            <label><input type="radio" name="target" value="0" /><span>A</span></label>
+            <label><input type="radio" name="target" value="1" /><span>B</span></label>
+          </div>
+          <p class="note" id="adjust-note">Drag on either side of the line to move that photo; pinch or scroll to zoom it; twist with two fingers to turn it.</p>
+          <fieldset class="sliders" id="adjust-sliders">
+            <legend class="visually-hidden">Placement of the selected photo</legend>
+            <div class="field">
+              <label for="zoom">Zoom</label>
+              <input type="range" id="zoom" min="-100" max="300" step="1" value="0" />
+              <output for="zoom" id="zoom-out">1.00×</output>
+            </div>
+            <div class="field">
+              <label for="rotate">Rotate</label>
+              <input type="range" id="rotate" min="-180" max="180" step="0.5" value="0" />
+              <output for="rotate" id="rotate-out">0°</output>
+            </div>
+            <div class="field">
+              <label for="pan-x">Across</label>
+              <input type="range" id="pan-x" min="-100" max="100" step="0.5" value="0" />
+              <output for="pan-x" id="pan-x-out">0</output>
+            </div>
+            <div class="field">
+              <label for="pan-y">Up/down</label>
+              <input type="range" id="pan-y" min="-100" max="100" step="0.5" value="0" />
+              <output for="pan-y" id="pan-y-out">0</output>
+            </div>
+            <button type="button" class="btn small" id="reset-photo">Reset this photo</button>
+          </fieldset>
+        </section>
+
+        <section class="group" aria-labelledby="h-export">
+          <h2 id="h-export">Export</h2>
+          <div class="field col">
+            <label for="preset">Size</label>
+            <select id="preset">
+              <option value="ig-portrait">Instagram portrait, 1080 × 1350</option>
+              <option value="ig-square">Instagram square, 1080 × 1080</option>
+              <option value="story">Story, 1080 × 1920</option>
+              <option value="x">X post, 1600 × 900</option>
+              <option value="source">Source resolution</option>
+              <option value="custom">Custom…</option>
+            </select>
+          </div>
+          <div class="custom" id="custom-size" hidden>
+            <label>Width <input type="number" id="custom-w" min="16" max="16384" step="2" value="2000" inputmode="numeric" /></label>
+            <span aria-hidden="true">×</span>
+            <label>Height <input type="number" id="custom-h" min="16" max="16384" step="2" value="2000" inputmode="numeric" /></label>
+          </div>
+          <div class="field col">
+            <label for="color">Colour</label>
+            <select id="color">
+              <option value="p3">Display P3 (wide gamut)</option>
+              <option value="srgb">sRGB (universal)</option>
+            </select>
+          </div>
+
+          <h3>Still image</h3>
+          <div class="seg" role="radiogroup" aria-label="Image format" id="still-formats">
+            <label><input type="radio" name="still" value="png" checked /><span>PNG</span></label>
+            <label><input type="radio" name="still" value="webp" /><span>WebP</span></label>
+            <label data-format="avif" hidden><input type="radio" name="still" value="avif" /><span>AVIF</span></label>
+          </div>
+          <button type="button" class="btn primary wide" id="save-still" disabled>Save image</button>
+
+          <h3>Animated reveal</h3>
+          <div class="field">
+            <label for="sweep">Sweep</label>
+            <input type="range" id="sweep" min="1" max="6" step="0.1" value="3" />
+            <output for="sweep" id="sweep-out">3.0 s</output>
+          </div>
+          <div class="field">
+            <label for="hold">Hold</label>
+            <input type="range" id="hold" min="0" max="2" step="0.1" value="0.6" />
+            <output for="hold" id="hold-out">0.6 s</output>
+          </div>
+          <label class="check"><input type="checkbox" id="round-trip" checked /> Sweep back, so it loops</label>
+          <div class="seg" role="radiogroup" aria-label="Video format" id="video-formats">
+            <label data-format="webm" hidden><input type="radio" name="video" value="webm" /><span>WebM</span></label>
+            <label data-format="mp4" hidden><input type="radio" name="video" value="mp4" /><span>MP4</span></label>
+          </div>
+          <div class="row">
+            <button type="button" class="btn" id="preview-reveal" disabled>Preview</button>
+            <button type="button" class="btn primary grow" id="save-video" disabled>Save video</button>
+          </div>
+          <div class="progress" id="progress" hidden>
+            <progress id="progress-bar" max="1" value="0" aria-label="Export progress"></progress>
+            <span id="progress-text" aria-live="polite"></span>
+            <button type="button" class="btn small" id="cancel">Cancel</button>
+          </div>
+        </section>
+
+        <footer class="tech" id="tech">Starting the renderer…</footer>
+      </aside>
+    </main>
+
+    <div class="toasts" id="toasts" role="status" aria-live="polite"></div>
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>

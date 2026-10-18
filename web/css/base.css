@@ -1,0 +1,146 @@
+/* Tokens, themes and element defaults. */
+
+:root {
+  color-scheme: light;
+  --bg: #f4f2ee;
+  --surface: #ffffff;
+  --surface-2: #ece9e3;
+  --line: #dcd7ce;
+  --ink: #1c1b19;
+  --ink-2: #5b574f;
+  --ink-3: #6f6a61;
+  --a: #e0662b;
+  --a-soft: #fbe4d6;
+  --b: #4b5fe0;
+  --b-soft: #dfe3fb;
+  --accent: #3d4fd1;
+  --accent-ink: #ffffff;
+  --focus: #1f56ff;
+  --stage: #e6e2db;
+  --shadow: 0 1px 2px rgb(30 25 15 / 0.08), 0 6px 24px rgb(30 25 15 / 0.08);
+  --radius: 12px;
+  --font: ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+  --mono: ui-monospace, 'SF Mono', 'Cascadia Mono', Menlo, Consolas, monospace;
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme='light']) {
+    color-scheme: dark;
+    --bg: #131316;
+    --surface: #1c1c21;
+    --surface-2: #26262d;
+    --line: #34343c;
+    --ink: #edebe7;
+    --ink-2: #b3afa8;
+    --ink-3: #9d9991;
+    --a: #f08048;
+    --a-soft: #3a2519;
+    --b: #8191ff;
+    --b-soft: #232846;
+    --accent: #8191ff;
+    --accent-ink: #0f1020;
+    --focus: #9fb0ff;
+    --stage: #0d0d10;
+    --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 28px rgb(0 0 0 / 0.35);
+  }
+}
+
+:root[data-theme='dark'] {
+  color-scheme: dark;
+  --bg: #131316;
+  --surface: #1c1c21;
+  --surface-2: #26262d;
+  --line: #34343c;
+  --ink: #edebe7;
+  --ink-2: #b3afa8;
+  --ink-3: #9d9991;
+  --a: #f08048;
+  --a-soft: #3a2519;
+  --b: #8191ff;
+  --b-soft: #232846;
+  --accent: #8191ff;
+  --accent-ink: #0f1020;
+  --focus: #9fb0ff;
+  --stage: #0d0d10;
+  --shadow: 0 1px 2px rgb(0 0 0 / 0.4), 0 8px 28px rgb(0 0 0 / 0.35);
+}
+
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
+html {
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  margin: 0;
+  min-height: 100svh;
+  background: var(--bg);
+  color: var(--ink);
+  font: 15px/1.45 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+
+button,
+input,
+select {
+  font: inherit;
+  color: inherit;
+}
+
+svg {
+  display: block;
+}
+
+:focus-visible {
+  outline: 2.5px solid var(--focus);
+  outline-offset: 2px;
+}
+
+.visually-hidden {
+  position: absolute !important;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+  border: 0;
+}
+
+.skip {
+  position: absolute;
+  left: 12px;
+  top: -48px;
+  z-index: 10;
+  padding: 8px 12px;
+  border-radius: 8px;
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: var(--shadow);
+}
+
+.skip:focus {
+  top: 12px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    transition-duration: 0.01ms !important;
+    animation-duration: 0.01ms !important;
+  }
+}
