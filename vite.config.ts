@@ -3,6 +3,7 @@ import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import wasm from 'vite-plugin-wasm';
+import { VitePWA } from 'vite-plugin-pwa';
 
 const mediapipeDir = resolve(import.meta.dirname, 'node_modules/@mediapipe/tasks-vision/wasm');
 // The classic (non-module) builds: SIMD for every current browser, and the
@@ -44,6 +45,20 @@ export default defineConfig({
   plugins: [
     wasm(),
     mediapipeAssets(),
+    VitePWA({
+      strategies: 'injectManifest',
+      srcDir: 'src',
+      filename: 'sw.ts',
+      injectRegister: false,
+      registerType: 'autoUpdate',
+      manifest: false,
+      injectManifest: {
+        globPatterns: ['**/*.{html,js,css,wasm,svg,png,webmanifest,task}', 'mediapipe/vision_wasm_internal.*'],
+        globIgnores: ['**/screenshots/**', 'samples/**', 'mediapipe/vision_wasm_nosimd_internal.*'],
+        maximumFileSizeToCacheInBytes: 16 * 1024 * 1024,
+      },
+      devOptions: { enabled: false },
+    }),
   ],
   test: {
     root: '.',
