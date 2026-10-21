@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
 import type { Plugin } from 'vite';
@@ -30,6 +31,41 @@ function mediapipeAssets(): Plugin {
   };
 }
 
+/**
+ * A Content-Security-Policy that makes the privacy promise mechanical: the
+ * page may only talk to its own origin, so it cannot upload anything.
+ * Build only, because Vite's dev server needs a websocket and inline scripts.
+ */
+function contentSecurityPolicy(): Plugin {
+  const policy = (inline: string[]) => [
+    "default-src 'self'",
+    `script-src 'self' 'wasm-unsafe-eval' ${inline.join(' ')}`,
+    "style-src 'self' 'unsafe-inline'",
+    "img-src 'self' blob: data:",
+    "media-src 'self' blob:",
+    "connect-src 'self'",
+    "worker-src 'self' blob:",
+    "manifest-src 'self'",
+    "object-src 'none'",
+    "base-uri 'self'",
+    "form-action 'self'",
+  ].join('; ');
+  // The one inline script (the theme, applied before first paint) is
+  // allowed by its hash.
+  const hashes = (html: string) =>
+    [...html.matchAll(/<script>([\s\S]*?)<\/script>/g)].map(
+      (m) => `'sha256-${createHash('sha256').update(m[1]).digest('base64')}'`,
+    );
+  return {
+    name: 'diagonal-blend:csp',
+    apply: 'build',
+    transformIndexHtml(html) {
+      const csp = policy(hashes(html));
+      return html.replace('<meta charset="utf-8" />', `<meta charset="utf-8" />\n    <meta http-equiv="Content-Security-Policy" content="${csp}" />`);
+    },
+  };
+}
+
 export default defineConfig({
   root: 'web',
   publicDir: 'public',
@@ -45,6 +81,7 @@ export default defineConfig({
   plugins: [
     wasm(),
     mediapipeAssets(),
+    contentSecurityPolicy(),
     VitePWA({
       strategies: 'injectManifest',
       srcDir: 'src',
