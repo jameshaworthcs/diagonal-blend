@@ -101,6 +101,7 @@ export function videoSize(w: number, h: number, max = VIDEO_MAX): [number, numbe
 }
 
 export async function renderReveal(
+  core: Core,
   renderer: Renderer,
   scene: Scene,
   format: VideoFormat,
@@ -125,8 +126,19 @@ export async function renderReveal(
       : null;
 
   let failure: unknown = null;
+  // webm-muxer has no code for P3 primaries: let it write BT.709 and put
+  // the right value in afterwards.
+  let p3Webm = false;
   const encoder = new VideoEncoder({
-    output: (chunk, meta) => (webm ? webm.addVideoChunk(chunk, meta) : mp4!.addVideoChunk(chunk, meta)),
+    output: (chunk, meta) => {
+      if (mp4) return mp4.addVideoChunk(chunk, meta);
+      const cs = meta?.decoderConfig?.colorSpace;
+      if (meta?.decoderConfig && (cs?.primaries as string | undefined) === 'smpte432') {
+        p3Webm = true;
+        meta = { ...meta, decoderConfig: { ...meta.decoderConfig, colorSpace: { ...cs, primaries: 'bt709' } } };
+      }
+      webm!.addVideoChunk(chunk, meta);
+    },
     error: (e) => (failure = e),
   });
   encoder.configure({
@@ -177,7 +189,9 @@ export async function renderReveal(
 
   if (webm) {
     webm.finalize();
-    return new Blob([webm.target.buffer], { type: 'video/webm' });
+    const bytes = new Uint8Array(webm.target.buffer);
+    if (p3Webm) core.webm_set_primaries(bytes, 12);
+    return new Blob([bytes], { type: 'video/webm' });
   }
   mp4!.finalize();
   return new Blob([mp4!.target.buffer], { type: 'video/mp4' });

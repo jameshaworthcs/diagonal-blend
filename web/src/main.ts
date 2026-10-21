@@ -482,7 +482,7 @@ async function saveVideo() {
   updateButtons();
   const [w, h] = videoSize(...outputSize());
   try {
-    const blob = await renderReveal(renderer, scene, format, support, [w, h], spaceCode(), (done, total) => {
+    const blob = await renderReveal(core, renderer, scene, format, support, [w, h], spaceCode(), (done, total) => {
       bar.value = done / total;
       text.textContent = `Frame ${done} of ${total}`;
     }, controller.signal);

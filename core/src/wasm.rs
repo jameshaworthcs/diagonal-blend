@@ -129,6 +129,12 @@ pub fn tag_webp(webp: &[u8], space: u32) -> Result<Vec<u8>, JsValue> {
     crate::encode::webp_with_icc(webp, Space::from_code(space)).map_err(|e| JsValue::from_str(&e))
 }
 
+/// Set a WebM's colour primaries (12 for Display P3); see `encode`.
+#[wasm_bindgen]
+pub fn webm_set_primaries(webm: &mut [u8], code: u8) -> bool {
+    crate::encode::webm_set_primaries(webm, code)
+}
+
 #[wasm_bindgen]
 pub fn icc_profile(space: u32) -> Vec<u8> {
     crate::icc::profile(Space::from_code(space))

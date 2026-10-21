@@ -87,6 +87,53 @@ pub fn webp_with_icc(webp: &[u8], space: Space) -> Result<Vec<u8>, String> {
     Ok(out)
 }
 
+/// Read an EBML variable-length integer at `i`: (value, length). IDs keep
+/// their length marker; sizes do not.
+fn vint(b: &[u8], i: usize, keep_marker: bool) -> Option<(u64, usize)> {
+    let first = *b.get(i)?;
+    let len = first.leading_zeros() as usize + 1;
+    if len > 8 {
+        return None;
+    }
+    let mut v = if keep_marker { first as u64 } else { (first as u64) & (0xff >> len) };
+    for k in 1..len {
+        v = (v << 8) | *b.get(i + k)? as u64;
+    }
+    Some((v, len))
+}
+
+/// Set the colour primaries (ISO/IEC 23091-2 code, 12 for Display P3) in a
+/// WebM's `Colour` element. webm-muxer cannot express P3, so it writes
+/// BT.709 and this corrects it in place. Returns whether it found the field.
+pub fn webm_set_primaries(webm: &mut [u8], code: u8) -> bool {
+    const PRIMARIES: u64 = 0x55bb;
+    let mut i = 0;
+    while i + 2 < webm.len() {
+        // Scan for the Colour element's ID, then walk its children.
+        if webm[i] == 0x55 && webm[i + 1] == 0xb0 {
+            if let Some((size, n)) = vint(webm, i + 2, false) {
+                let start = i + 2 + n;
+                let end = start.saturating_add(size as usize).min(webm.len());
+                let mut j = start;
+                while j < end {
+                    let Some((id, idn)) = vint(webm, j, true) else { break };
+                    let Some((len, ln)) = vint(webm, j + idn, false) else { break };
+                    let body = j + idn + ln;
+                    if id == PRIMARIES && len >= 1 && body + len as usize <= end {
+                        let field = &mut webm[body..body + len as usize];
+                        field.fill(0);
+                        field[len as usize - 1] = code;
+                        return true;
+                    }
+                    j = body + len as usize;
+                }
+            }
+        }
+        i += 1;
+    }
+    false
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -140,6 +187,24 @@ mod tests {
         let again = webp_with_icc(&out, Space::Srgb).unwrap();
         assert_eq!(detect(&again), Detected::Known(Space::Srgb));
         assert_eq!(again.windows(4).filter(|w| w == b"ICCP").count(), 1);
+    }
+
+    #[test]
+    fn patches_webm_primaries() {
+        // Video > Colour { MatrixCoefficients 1, TransferCharacteristics 13,
+        // Primaries 1, Range 2 }, after some unrelated bytes.
+        let mut webm = vec![0x1a, 0x45, 0xdf, 0xa3, 0x80, 0xe0, 0x90];
+        webm.extend_from_slice(&[0x55, 0xb0, 0x8c]);
+        webm.extend_from_slice(&[0x55, 0xb1, 0x81, 0x01]);
+        webm.extend_from_slice(&[0x55, 0xba, 0x81, 0x0d]);
+        webm.extend_from_slice(&[0x55, 0xbb, 0x81, 0x01]);
+        webm.extend_from_slice(&[0x55, 0xb9, 0x81, 0x02]);
+        let before = webm.clone();
+        assert!(webm_set_primaries(&mut webm, 12));
+        let changed: Vec<usize> = (0..webm.len()).filter(|&i| webm[i] != before[i]).collect();
+        assert_eq!(changed, vec![webm.len() - 5]);
+        assert_eq!(webm[webm.len() - 5], 12);
+        assert!(!webm_set_primaries(&mut [0u8; 16], 12));
     }
 
     #[test]
