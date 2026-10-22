@@ -577,7 +577,7 @@ async function boot() {
   } catch (e) {
     console.error(e);
     $('tech').textContent = 'No WebGPU or WebGL2 here, so nothing can be drawn.';
-    document.querySelector('.drop h1')!.textContent = 'This browser cannot run diagonal blend.';
+    document.querySelector('.drop .hero')!.textContent = 'This browser cannot run diagonal blend.';
     document.querySelector('.drop p')!.textContent = 'It needs WebGPU or WebGL2. Try a current Chrome, Edge, Firefox or Safari.';
     return;
   }

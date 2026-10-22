@@ -37,7 +37,7 @@
       </a>
       <p class="private" title="Photos never leave this device. The page is not allowed to connect anywhere else.">
         <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 10V7a5 5 0 0 1 10 0v3M5.5 10h13v10h-13z" /></svg>
-        On-device. Nothing is uploaded.
+        <span class="long">On-device.&nbsp;</span>Nothing is uploaded.
       </p>
       <div class="bar-actions">
         <button type="button" class="icon-btn" id="install" hidden>
@@ -51,6 +51,7 @@
     </header>
 
     <main class="layout">
+      <h1 class="visually-hidden">diagonal blend: blend two photos along a diagonal</h1>
       <section class="stage" id="stage" aria-label="Preview">
         <div class="canvas-wrap" id="canvas-wrap">
           <canvas id="canvas" role="img" aria-label="Blended preview"></canvas>
@@ -75,7 +76,7 @@
               <rect x="48" y="8" width="66" height="74" rx="8" class="art-b" />
               <path d="M88 4 32 86" class="art-line" />
             </svg>
-            <h1>Two photos, one seamless diagonal.</h1>
+            <h2 class="hero">Two photos, one seamless diagonal.</h2>
             <p>Drop two photos here, paste them, or choose them below. Align two faces with one tap and export a still or an animated reveal.</p>
             <div class="drop-actions">
               <label class="btn primary">
