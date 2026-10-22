@@ -64,8 +64,9 @@ def cool(x, y, w=900, h=1200):
 def letter_f(x, y, w=600, h=400):
     """A stored-sideways 'F': it only reads correctly once rotated."""
     # The F is drawn as it should look after EXIF orientation 6 (rotate 90
-    # degrees clockwise), so the stored image holds it turned the other way.
-    dx, dy = y, w - 1 - x  # displayed coordinates, 400 x 600
+    # degrees clockwise to display), so the stored image holds it turned a
+    # quarter anticlockwise: stored (x, y) is displayed at (h - 1 - y, x).
+    dx, dy = h - 1 - y, x  # displayed coordinates, 400 x 600
     stem = 80 <= dx < 140 and 100 <= dy < 500
     top = 80 <= dx < 320 and 100 <= dy < 160
     mid = 80 <= dx < 260 and 270 <= dy < 330
