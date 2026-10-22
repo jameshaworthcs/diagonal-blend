@@ -203,7 +203,11 @@ export class Stage {
     const c = this.canvas;
     c.addEventListener('pointerdown', (e) => {
       if (!this.host.scene.has_image(0) && !this.host.scene.has_image(1)) return;
-      c.setPointerCapture(e.pointerId);
+      try {
+        c.setPointerCapture(e.pointerId);
+      } catch {
+        // Synthetic or already-released pointers cannot be captured.
+      }
       const p = this.local(e);
       if (this.pointers.size === 0) {
         const t = this.host.target();
