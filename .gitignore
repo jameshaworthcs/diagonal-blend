@@ -8,3 +8,4 @@ blob-report/
 web/src/pkg/
 *.local.sh
 .DS_Store
+lighthouse/
