@@ -10,6 +10,7 @@ test('settings come back from the url', async ({ page }) => {
   await expect(page.locator('#color')).toHaveValue('srgb');
   await expect(page.locator('#sweep')).toHaveValue('4.5');
   await expect(page.locator('#round-trip')).not.toBeChecked();
+  await load(page, fixture('pattern-a.png'), fixture('pattern-b.png'));
   const box = await page.locator('#canvas').boundingBox();
   expect(box!.width / box!.height).toBeCloseTo(1080 / 1920, 2);
 });

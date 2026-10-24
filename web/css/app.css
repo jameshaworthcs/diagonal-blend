@@ -81,6 +81,7 @@
 }
 
 .bar-actions {
+  position: relative;
   display: flex;
   gap: 6px;
 }
@@ -142,6 +143,10 @@
   background: var(--stage);
   overflow: hidden;
   touch-action: none;
+}
+
+.stage.empty-state .canvas-wrap {
+  display: none;
 }
 
 .canvas-wrap {

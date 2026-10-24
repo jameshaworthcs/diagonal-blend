@@ -24,7 +24,9 @@ const reducedMotion = matchMedia('(prefers-reduced-motion: reduce)');
 
 let core: Core;
 let scene: Scene;
-let renderer: Renderer;
+let renderer: Renderer | null = null;
+let gpu: Promise<Renderer | null> | null = null;
+let coreReady: Promise<void>;
 let stage: Stage;
 let support: Support = { avif: false, webm: null, mp4: null };
 let active: 0 | 1 = 0;
@@ -75,8 +77,10 @@ function invalidate() {
 
 function draw() {
   frameRequested = false;
-  if (stage.layout(scene.aspect())) renderer.resize(stage.device.w, stage.device.h);
-  renderer.render(scene, bg, revealTime ?? -1);
+  if (renderer) {
+    if (stage.layout(scene.aspect())) renderer.resize(stage.device.w, stage.device.h);
+    renderer.render(scene, bg, revealTime ?? -1);
+  }
   stage.update(revealTime === null && (photos[0] !== null || photos[1] !== null));
   syncControls();
 }
@@ -196,7 +200,7 @@ function bindControls() {
 
   $('swap').addEventListener('click', () => {
     scene.swap();
-    renderer.swap();
+    renderer?.swap();
     photos.reverse();
     eyes.reverse();
     showSlots();
@@ -298,6 +302,8 @@ async function loadInto(slot: 0 | 1, file: Blob, name: string) {
   $(`name-${slot}`).textContent = 'Opening…';
   document.body.dataset.state = 'loading';
   try {
+    const renderer = await ensureRenderer();
+    if (!renderer) return;
     const photo = await decodePhoto(core, file, name, renderer.max_texture_size());
     renderer.set_texture(slot, new Uint8Array(photo.rgba.buffer), photo.width, photo.height);
     photo.rgba = new Uint8ClampedArray(0);
@@ -321,6 +327,7 @@ async function loadInto(slot: 0 | 1, file: Blob, name: string) {
 /** Two files fill both slots; one fills the empty slot, or `prefer`. */
 async function loadFiles(files: File[], prefer?: 0 | 1) {
   if (files.length === 0) return toast('Those were not image files.', 'warn');
+  await coreReady;
   if (files.length > 2) toast('Using the first two photos.');
   if (files.length >= 2) {
     await Promise.all([loadInto(0, files[0], files[0].name), loadInto(1, files[1], files[1].name)]);
@@ -365,7 +372,7 @@ function bindLoading() {
     const files = imageFiles(e.dataTransfer?.files);
     let prefer: 0 | 1 | undefined;
     // One photo dropped on the preview replaces the side it lands on.
-    if (files.length === 1 && photos[0] && photos[1] && e.target === stage.canvas) {
+    if (files.length === 1 && photos[0] && photos[1] && stage && e.target === stage.canvas) {
       const r = stage.canvas.getBoundingClientRect();
       prefer = scene.side_at(e.clientX - r.left, e.clientY - r.top) as 0 | 1;
     }
@@ -456,7 +463,7 @@ async function saveStill() {
   btn.textContent = 'Rendering…';
   try {
     const started = performance.now();
-    const blob = await renderStill(core, renderer, scene, format, w, h, spaceCode());
+    const blob = await renderStill(core, renderer!, scene, format, w, h, spaceCode());
     await deliver(blob, `diagonal-blend-${w}x${h}.${format}`);
     const secs = ((performance.now() - started) / 1000).toFixed(1);
     toast(`Saved ${w} × ${h} ${format.toUpperCase()}, ${settings.color === 'p3' ? 'Display P3' : 'sRGB'}, ${(blob.size / 1e6).toFixed(1)} MB in ${secs} s.`);
@@ -482,7 +489,7 @@ async function saveVideo() {
   updateButtons();
   const [w, h] = videoSize(...outputSize());
   try {
-    const blob = await renderReveal(core, renderer, scene, format, support, [w, h], spaceCode(), (done, total) => {
+    const blob = await renderReveal(core, renderer!, scene, format, support, [w, h], spaceCode(), (done, total) => {
       bar.value = done / total;
       text.textContent = `Frame ${done} of ${total}`;
     }, controller.signal);
@@ -547,12 +554,61 @@ async function createRenderer(): Promise<Renderer> {
   }
 }
 
-async function boot() {
-  applyTheme(currentTheme());
-  $('theme').addEventListener('click', () => applyTheme(THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length]));
-  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readBackground);
-  setupPwa();
+/**
+ * The GPU side starts with the first photo: before that there is nothing to
+ * draw, and setting up a device and its pipelines is the costliest thing
+ * the page does.
+ */
+function ensureRenderer(): Promise<Renderer | null> {
+  gpu ??= (async () => {
+    try {
+      renderer = await createRenderer();
+    } catch (e) {
+      console.error(e);
+      $('tech').textContent = 'No WebGPU or WebGL2 here, so nothing can be drawn.';
+      toast('This browser cannot draw the blend: it needs WebGPU or WebGL2.', 'warn', 8000);
+      return null;
+    }
+    stage.maxBacking = Math.min(renderer.max_texture_size(), 4096);
+    const backend = renderer.backend();
+    const space = renderer.color_space();
+    document.body.dataset.backend = backend;
+    document.body.dataset.colorSpace = space;
+    $('tech').textContent = `${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'} · preview in ${space === 'display-p3' ? 'Display P3' : 'sRGB'} · Rust core via WebAssembly`;
+    support = await detectSupport();
+    showFormats();
+    updateButtons();
+    return renderer;
+  })();
+  return gpu;
+}
 
+/** Once the page has painted its content. */
+function painted(): Promise<void> {
+  return new Promise((resolve) => {
+    const fcp = (list: PerformanceEntryList) => list.some((e) => e.name === 'first-contentful-paint');
+    if (fcp(performance.getEntriesByType('paint'))) return resolve();
+    try {
+      const o = new PerformanceObserver((l) => fcp(l.getEntries()) && (o.disconnect(), resolve()));
+      o.observe({ type: 'paint', buffered: true });
+    } catch {
+      resolve();
+    }
+    setTimeout(resolve, 1500);
+  });
+}
+
+/** After the first paint and the load event, when the main thread is idle:
+ * the page is on screen and usable before the 2 MB core starts to download. */
+async function idle(): Promise<void> {
+  await painted();
+  if (document.readyState !== 'complete') await new Promise((r) => addEventListener('load', r, { once: true }));
+  await new Promise<void>((resolve) =>
+    'requestIdleCallback' in window ? requestIdleCallback(() => resolve(), { timeout: 600 }) : setTimeout(resolve, 50),
+  );
+}
+
+async function startCore() {
   core = await loadCore();
   scene = new core.Scene();
   stage = new Stage({
@@ -572,32 +628,22 @@ async function boot() {
     showEyes: () => $<HTMLInputElement>('show-eyes').checked,
   });
   push();
-  try {
-    renderer = await createRenderer();
-  } catch (e) {
-    console.error(e);
-    $('tech').textContent = 'No WebGPU or WebGL2 here, so nothing can be drawn.';
-    document.querySelector('.drop .hero')!.textContent = 'This browser cannot run diagonal blend.';
-    document.querySelector('.drop p')!.textContent = 'It needs WebGPU or WebGL2. Try a current Chrome, Edge, Firefox or Safari.';
-    return;
-  }
-  stage.maxBacking = Math.min(renderer.max_texture_size(), 4096);
-  const backend = renderer.backend();
-  const space = renderer.color_space();
-  document.body.dataset.backend = backend;
-  document.body.dataset.colorSpace = space;
-  $('tech').textContent = `${backend === 'webgpu' ? 'WebGPU' : 'WebGL2'} · preview in ${space === 'display-p3' ? 'Display P3' : 'sRGB'} · Rust core via WebAssembly`;
-
   bindControls();
-  bindLoading();
   new ResizeObserver(invalidate).observe($('stage'));
   readBackground();
   showSlots();
   document.body.dataset.state = 'ready';
+}
 
-  support = await detectSupport();
-  showFormats();
-  updateButtons();
+async function boot() {
+  applyTheme(currentTheme());
+  $('theme').addEventListener('click', () => applyTheme(THEMES[(THEMES.indexOf(currentTheme()) + 1) % THEMES.length]));
+  matchMedia('(prefers-color-scheme: dark)').addEventListener('change', readBackground);
+  setupPwa();
+  // Photos chosen before the core is ready wait for it.
+  bindLoading();
+  coreReady = idle().then(startCore);
+  await coreReady;
 
   const shared = await takeSharedPhotos();
   if (shared.length) await loadFiles(shared);

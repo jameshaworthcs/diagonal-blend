@@ -52,7 +52,7 @@
 
     <main class="layout">
       <h1 class="visually-hidden">diagonal blend: blend two photos along a diagonal</h1>
-      <section class="stage" id="stage" aria-label="Preview">
+      <section class="stage empty-state" id="stage" aria-label="Preview">
         <div class="canvas-wrap" id="canvas-wrap">
           <canvas id="canvas" role="img" aria-label="Blended preview"></canvas>
           <svg class="overlay" id="overlay" aria-hidden="true">
@@ -252,7 +252,7 @@
           </div>
         </section>
 
-        <footer class="tech" id="tech">Starting the renderer…</footer>
+        <footer class="tech" id="tech">Draws with WebGPU, or WebGL2 where there is no WebGPU, once a photo is in.</footer>
       </aside>
     </main>
 
