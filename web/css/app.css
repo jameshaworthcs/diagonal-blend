@@ -86,6 +86,14 @@
   gap: 6px;
 }
 
+/* Appears late (when the browser offers installation), so it sits outside
+   the flow and moves nothing when it does. */
+#install {
+  position: absolute;
+  right: calc(100% + 6px);
+  top: 0;
+}
+
 .icon-btn {
   display: inline-flex;
   align-items: center;
