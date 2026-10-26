@@ -129,6 +129,12 @@ pub fn tag_webp(webp: &[u8], space: u32) -> Result<Vec<u8>, JsValue> {
     crate::encode::webp_with_icc(webp, Space::from_code(space)).map_err(|e| JsValue::from_str(&e))
 }
 
+/// Wrap one AV1 key frame as an AVIF still tagged with `space`.
+#[wasm_bindgen]
+pub fn encode_avif(av1: &[u8], width: u32, height: u32, space: u32) -> Result<Vec<u8>, JsValue> {
+    crate::avif::avif(av1, width, height, Space::from_code(space)).map_err(|e| JsValue::from_str(&e))
+}
+
 /// Set a WebM's colour primaries (12 for Display P3); see `encode`.
 #[wasm_bindgen]
 pub fn webm_set_primaries(webm: &mut [u8], code: u8) -> bool {

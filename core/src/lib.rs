@@ -1,6 +1,7 @@
 //! diagonal-blend core: geometry, colour, file parsing and the wgpu renderer.
 
 pub mod align;
+pub mod avif;
 pub mod color;
 pub mod encode;
 pub mod exif;
