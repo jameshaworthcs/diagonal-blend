@@ -7,7 +7,8 @@ export type StillFormat = 'png' | 'webp' | 'avif';
 export type VideoFormat = 'webm' | 'mp4';
 
 export interface Support {
-  avif: boolean;
+  /** AVIF straight from the canvas, or through a WebCodecs AV1 key frame. */
+  avif: 'canvas' | 'av1' | null;
   webm: VideoCodec | null;
   mp4: VideoCodec | null;
 }
@@ -38,14 +39,22 @@ async function encoderSupports(codec: string, width = 1080, height = 1350): Prom
 /** H.264 level from the frame size: 4.0 up to 1080p, 5.1 beyond. */
 const avc = (w: number, h: number) => (Math.ceil(w / 16) * Math.ceil(h / 16) > 8192 ? 'avc1.640033' : 'avc1.640028');
 
+/** AV1 main profile, 8-bit, with the level picked by picture size. */
+const av1Still = (w: number, h: number) => {
+  const samples = w * h;
+  const level = samples <= 2_228_224 ? '08' : samples <= 8_912_896 ? '13' : '16';
+  return `av01.0.${level}M.08`;
+};
+
 export async function detectSupport(): Promise<Support> {
-  let avif = false;
+  let avif: Support['avif'] = null;
   try {
     const blob = await new OffscreenCanvas(2, 2).convertToBlob({ type: 'image/avif' });
-    avif = blob.type === 'image/avif';
+    if (blob.type === 'image/avif') avif = 'canvas';
   } catch {
-    avif = false;
+    // No canvas encoder: try AV1 below.
   }
+  if (!avif && (await encoderSupports(av1Still(1080, 1350)))) avif = 'av1';
   let webm: VideoCodec | null = null;
   for (const [codec, mux] of [
     ['vp09.00.40.08', 'V_VP9'],
@@ -60,6 +69,45 @@ export async function detectSupport(): Promise<Support> {
   return { avif, webm, mp4 };
 }
 
+/** One AV1 key frame from RGBA pixels, boxed as AVIF by the core. */
+async function avifFromAv1(core: Core, px: Uint8Array, width: number, height: number, space: 0 | 1): Promise<Blob> {
+  const codec = av1Still(width, height);
+  const quantizer = (await VideoEncoder.isConfigSupported({ codec, width, height, bitrateMode: 'quantizer' }).catch(() => null))?.supported;
+  let data: Uint8Array | null = null;
+  let failure: unknown = null;
+  const encoder = new VideoEncoder({
+    output: (chunk) => {
+      data = new Uint8Array(chunk.byteLength);
+      chunk.copyTo(data);
+    },
+    error: (e) => (failure = e),
+  });
+  encoder.configure({
+    codec,
+    width,
+    height,
+    latencyMode: 'quality',
+    framerate: 1,
+    // With one frame a second, the bitrate is the frame's budget: about
+    // 2 bits a pixel where the encoder cannot take a quantiser instead.
+    ...(quantizer ? { bitrateMode: 'quantizer' as const } : { bitrate: Math.round(width * height * 2) }),
+  });
+  const frame = new VideoFrame(px, {
+    format: 'RGBA',
+    codedWidth: width,
+    codedHeight: height,
+    timestamp: 0,
+    colorSpace: { primaries: (space === 1 ? 'smpte432' : 'bt709') as VideoColorPrimaries, transfer: 'iec61966-2-1', matrix: 'rgb', fullRange: true },
+  });
+  encoder.encode(frame, { keyFrame: true, ...(quantizer ? { av1: { quantizer: 16 } } : {}) });
+  frame.close();
+  await encoder.flush();
+  encoder.close();
+  if (failure) throw failure;
+  if (!data) throw new Error('the AV1 encoder returned nothing');
+  return new Blob([core.encode_avif(data, width, height, space) as Uint8Array<ArrayBuffer>], { type: 'image/avif' });
+}
+
 export async function renderStill(
   core: Core,
   renderer: Renderer,
@@ -68,8 +116,15 @@ export async function renderStill(
   width: number,
   height: number,
   space: 0 | 1,
+  support?: Support,
 ): Promise<Blob> {
+  if (format === 'avif' && support?.avif === 'av1') {
+    // 4:2:0 chroma wants even sizes.
+    width -= width % 2;
+    height -= height % 2;
+  }
   const px: Uint8Array = await renderer.render_pixels(scene, width, height, space, BLACK, -1);
+  if (format === 'avif' && support?.avif === 'av1') return avifFromAv1(core, px, width, height, space);
   if (format === 'png') {
     return new Blob([core.encode_png(px, width, height, space) as Uint8Array<ArrayBuffer>], { type: 'image/png' });
   }

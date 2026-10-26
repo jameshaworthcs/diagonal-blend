@@ -28,7 +28,7 @@ let renderer: Renderer | null = null;
 let gpu: Promise<Renderer | null> | null = null;
 let coreReady: Promise<void>;
 let stage: Stage;
-let support: Support = { avif: false, webm: null, mp4: null };
+let support: Support = { avif: null, webm: null, mp4: null };
 let active: 0 | 1 = 0;
 let revealTime: number | null = null;
 let busy = false;
@@ -463,7 +463,7 @@ async function saveStill() {
   btn.textContent = 'Rendering…';
   try {
     const started = performance.now();
-    const blob = await renderStill(core, renderer!, scene, format, w, h, spaceCode());
+    const blob = await renderStill(core, renderer!, scene, format, w, h, spaceCode(), support);
     await deliver(blob, `diagonal-blend-${w}x${h}.${format}`);
     const secs = ((performance.now() - started) / 1000).toFixed(1);
     toast(`Saved ${w} × ${h} ${format.toUpperCase()}, ${settings.color === 'p3' ? 'Display P3' : 'sRGB'}, ${(blob.size / 1e6).toFixed(1)} MB in ${secs} s.`);
@@ -529,7 +529,7 @@ function previewReveal() {
 
 function showFormats() {
   const avif = document.querySelector<HTMLElement>('[data-format="avif"]')!;
-  avif.hidden = !support.avif;
+  avif.hidden = support.avif === null;
   for (const f of ['webm', 'mp4'] as const) {
     document.querySelector<HTMLElement>(`[data-format="${f}"]`)!.hidden = !support[f];
   }

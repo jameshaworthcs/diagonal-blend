@@ -57,3 +57,24 @@ test('animated reveal encodes and can be cancelled', async ({ page, browserName 
   await expect(page.locator('#toasts')).toContainText('cancelled');
   await expect(page.locator('#progress')).toBeHidden();
 });
+
+test('avif decodes and matches the png', async ({ page, browserName }) => {
+  await open(page, 's=33,0.02&p=ig-portrait&c=p3');
+  await load(page, fixture('scott-kelly.jpg'), fixture('mark-kelly.jpg'));
+  test.skip(await page.locator('[data-format=avif]').isHidden(), `no AVIF encoder in ${browserName}`);
+  const png = await exportStill(page, 'png');
+  const avif = await exportStill(page, 'avif');
+  expect(avif.file.suggestedFilename()).toBe('diagonal-blend-1080x1350.avif');
+  expect(avif.bytes.subarray(4, 12).toString()).toBe('ftypavif');
+  // Display P3 both as CICP (primaries 12) and as an ICC profile.
+  expect(avif.bytes.indexOf(Buffer.from('nclx\0\x0c\0\x0d', 'latin1'))).toBeGreaterThan(0);
+  expect(avif.bytes.indexOf('prof')).toBeGreaterThan(0);
+  const a = await decodePixels(page, png.bytes, 'image/png');
+  const b = await decodePixels(page, avif.bytes, 'image/avif');
+  expect([b.width, b.height]).toEqual([1080, 1350]);
+  let sum = 0;
+  for (let i = 0; i < a.data.length; i += 4) for (let c = 0; c < 3; c++) sum += Math.abs(a.data[i + c] - b.data[i + c]);
+  // Lossy and 4:2:0, but close: under 4 levels out of 255 on average.
+  // (Firefox's encoder uses limited range, which costs a little more.)
+  expect(sum / ((a.data.length / 4) * 3)).toBeLessThan(4);
+});
