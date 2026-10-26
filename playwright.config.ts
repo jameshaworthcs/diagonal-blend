@@ -18,7 +18,7 @@ const firefox = process.env.DISPLAY
       {
         name: 'firefox-webgl2',
         use: { ...devices['Desktop Firefox'], viewport: { width: 1280, height: 860 }, headless: false },
-        grepInvert: /@mobile-only/,
+        grepInvert: /@mobile-only|@p3-only/,
       },
     ]
   : [];
@@ -48,15 +48,21 @@ export default defineConfig({
     {
       name: 'chromium-webgpu',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 }, launchOptions: { args: webgpu } },
-      grepInvert: /@mobile-only/,
+      grepInvert: /@mobile-only|@p3-only/,
     },
     {
       name: 'chromium-webgl2',
       use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 }, launchOptions: { args: webgl2 } },
-      grepInvert: /@mobile-only/,
+      grepInvert: /@mobile-only|@p3-only/,
     },
     ...firefox,
     { name: 'mobile-chromium', use: { ...devices['Pixel 7'], launchOptions: { args: webgpu } }, grep: /@mobile/ },
+    // A Display P3 screen, for the wide-gamut preview on both backends.
+    ...(['webgpu', 'webgl2'] as const).map((backend) => ({
+      name: `chromium-p3-${backend}`,
+      use: { ...devices['Desktop Chrome'], viewport: { width: 1280, height: 860 }, launchOptions: { args: [...(backend === 'webgpu' ? webgpu : webgl2), '--force-color-profile=display-p3-d65'] } },
+      grep: /@p3-only/,
+    })),
   ],
   webServer: {
     command: 'npm run preview',
