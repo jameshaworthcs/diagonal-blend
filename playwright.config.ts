@@ -23,6 +23,9 @@ const firefox = process.env.DISPLAY
     ]
   : [];
 
+// BASE_URL points the suite at a deployed site instead of a local preview.
+const baseURL = process.env.BASE_URL ?? 'http://localhost:4173';
+
 export default defineConfig({
   testDir: 'tests/e2e',
   snapshotPathTemplate: '{testDir}/__snapshots__/{projectName}/{arg}{ext}',
@@ -37,7 +40,7 @@ export default defineConfig({
   retries: process.env.CI ? 1 : 0,
   reporter: [['list'], ['html', { open: 'never' }]],
   use: {
-    baseURL: 'http://localhost:4173',
+    baseURL,
     viewport: { width: 1280, height: 860 },
     deviceScaleFactor: 1,
     colorScheme: 'light',
@@ -64,10 +67,12 @@ export default defineConfig({
       grep: /@p3-only/,
     })),
   ],
-  webServer: {
-    command: 'npm run preview',
-    url: 'http://localhost:4173',
-    reuseExistingServer: !process.env.CI,
-    timeout: 30_000,
-  },
+  webServer: process.env.BASE_URL
+    ? undefined
+    : {
+        command: 'npm run preview',
+        url: baseURL,
+        reuseExistingServer: !process.env.CI,
+        timeout: 30_000,
+      },
 });
