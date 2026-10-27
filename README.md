@@ -68,7 +68,7 @@ $$w = \left\lVert \left(\tfrac{\partial d}{\partial x}, \tfrac{\partial d}{\part
 
 which the shader reads with `dpdx` and `dpdy` (they become `dFdx` and `dFdy` in the GLSL that naga writes for WebGL2). Since $d$ is already in pixels, $w = 1$ at every angle. The coverage is then a ramp across one footprint, centred on the line:
 
-$$t = \operatorname{smoothstep}\left(-\tfrac{w}{2},\ \tfrac{w}{2},\ d\right)$$
+$$t = \mathrm{smoothstep}\left(-\tfrac{w}{2},\ \tfrac{w}{2},\ d\right)$$
 
 With no feather the transition is one pixel wide, measured across the line, whatever its angle: a vertical edge has one in-between pixel per row and a 45° edge about 1.4. There are no stairs, because the coverage is computed from the exact distance rather than sampled. The end-to-end tests check both properties on real exports: no more in-between pixels per row than one pixel of width can cross, and a sub-pixel edge position that follows a straight line to within 0.15 px.
 
@@ -78,7 +78,7 @@ The mix is done in linear light. Photos are uploaded as `rgba8unorm-srgb` textur
 
 Feathering widens the same ramp: half the feather width $f$ is added to each side.
 
-$$t = \operatorname{smoothstep}\left(-\tfrac{w + f}{2},\ \tfrac{w + f}{2},\ d\right), \qquad \operatorname{smoothstep}(e_0, e_1, x) = s^2(3 - 2s),\ s = \operatorname{clamp}\left(\tfrac{x - e_0}{e_1 - e_0}, 0, 1\right)$$
+$$t = \mathrm{smoothstep}\left(-\tfrac{w + f}{2},\ \tfrac{w + f}{2},\ d\right), \qquad \mathrm{smoothstep}(e_0, e_1, x) = s^2(3 - 2s),\ s = \mathrm{clamp}\left(\tfrac{x - e_0}{e_1 - e_0}, 0, 1\right)$$
 
 Because $d$ is a true distance, the blend has the same width along the whole line, at any angle and at any output size (the feather is set as a fraction of the frame's short side and turned into pixels per render). A linear ramp would have a kink at each end of the band, where its slope jumps from 0 to $1/f$; the eye picks those up as faint lines (Mach bands). Smoothstep's slope is zero at both ends, so the band fades in and out with no visible boundary.
 
@@ -86,7 +86,7 @@ Because $d$ is a true distance, the blend has the same width along the whole lin
 
 A similarity transform (uniform scale, rotation and translation) has four degrees of freedom, and two point correspondences give exactly four equations, so one pair of eyes determines it. Treat points as complex numbers: the transform is $S(z) = a z + b$, where $a = s e^{i\varphi}$ carries the scale and the rotation. Requiring that B's eyes $q_1, q_2$ land on A's eyes $p_1, p_2$ gives
 
-$$a = \frac{p_2 - p_1}{q_2 - q_1}, \qquad b = p_1 - a\,q_1 .$$
+$$a = \frac{p_2 - p_1}{q_2 - q_1}, \qquad b = p_1 - a q_1 .$$
 
 The eyes are the iris centres from MediaPipe's 478-point face mesh, mapped into frame space through each photo's current placement, and always in the same anatomical order, so the solve works even when one photo is upside down. Composing $S$ with B's placement gives B's new centre ($a c + b$), zoom ($|a|$ times the old) and rotation (plus $\arg a$).
 
