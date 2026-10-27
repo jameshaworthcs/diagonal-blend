@@ -119,10 +119,14 @@ Each format and codec is feature-detected; anything the browser cannot encode is
 
 ## Lighthouse
 
+Measured on the live site with Lighthouse 13.5 on 27 October 2026, three runs each:
+
 | Run | Performance | Accessibility | Best practices | SEO |
 | --- | --- | --- | --- | --- |
-| Mobile, local production build | 100 | 100 | 100 | 100 |
-| Desktop, local production build | 100 | 100 | 100 | 100 |
+| Mobile (simulated slow 4G, 4× CPU) | 100 (99 to 100) | 100 | 100 | 100 |
+| Desktop | 100 | 100 | 100 | 100 |
+
+Mobile: first and largest contentful paint 1.0 s, total blocking time 70 ms, no layout shift. Desktop: 0.2 s, 0 ms, no layout shift.
 
 The page paints before anything heavy loads: the 2 MB core starts downloading once the page has painted and the main thread is idle, and the GPU device is created with the first photo. Run it yourself with `make lighthouse` (or `make lighthouse URL=http://localhost:4173/`).
 
@@ -139,7 +143,7 @@ make build   # the production site in dist/
 
 `make test` runs the Playwright suite in six projects: Chromium on WebGPU, Chromium with WebGPU disabled (so WebGL2), Firefox on WebGL2, a Pixel 7 in emulation, and Chromium on both backends with a forced Display P3 screen profile, which checks that the preview really presents P3 values. Firefox needs a display, because headless Firefox has no GL on Linux; the Makefile uses `$DISPLAY` or `xvfb-run` when there is one and otherwise leaves Firefox out. The visual snapshots live in `tests/e2e/__snapshots__`, one set per project. The fixtures and where they came from are described in [tests/fixtures](tests/fixtures/README.md).
 
-Other targets: `make fixtures`, `make icons` and `make screenshots` regenerate the generated assets; `make deploy VERSION=v0.1.1` tags a release, which deploys it. How the site is hosted is in [docs/DEPLOY.md](docs/DEPLOY.md).
+`BASE_URL=https://blend.cloud.jhaworth.ai npx playwright test` runs the same suite against the deployed site. Other targets: `make fixtures`, `make icons` and `make screenshots` regenerate the generated assets; `make deploy VERSION=v0.1.1` tags a release, which deploys it. How the site is hosted is in [docs/DEPLOY.md](docs/DEPLOY.md).
 
 ## Credits
 
