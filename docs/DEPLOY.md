@@ -27,7 +27,7 @@ gh workflow run pages.yml --ref v0.1.1
 
 | Workflow | Runs on | Does |
 | --- | --- | --- |
-| `ci.yml` | `pull_request`, `workflow_dispatch` | Rust tests, unit tests, types, build, the Playwright suite (Firefox under `xvfb-run`). |
+| `ci.yml` | `push` to `main`, `pull_request`, `workflow_dispatch` | Rust tests, unit tests, types, build, the Playwright suite (Firefox under `xvfb-run`). |
 | `pages.yml` | `push` of tags `v*`, `workflow_dispatch` | Build and deploy, as above. |
 
 Every action is pinned to a commit SHA, with its version in a comment.

@@ -1,4 +1,4 @@
-# diagonal blend. Everything runs locally; CI only runs on pull requests.
+# diagonal blend. Everything runs locally; CI runs the same on main and pull requests.
 
 WASM_BINDGEN := 0.2.129
 

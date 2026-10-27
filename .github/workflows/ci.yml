@@ -1,8 +1,10 @@
 name: CI
 
-# Pull requests and manual runs only: everything also runs locally with
-# `make test`, so pushes do not spend Actions minutes.
+# Pushes to main, pull requests and manual runs. Everything also runs
+# locally with `make test`.
 on:
+  push:
+    branches: [main]
   pull_request:
   workflow_dispatch:
 
