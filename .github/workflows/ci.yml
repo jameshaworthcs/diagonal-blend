@@ -40,11 +40,10 @@ jobs:
       - run: npm ci
       - name: Rust tests
         run: cargo test --manifest-path core/Cargo.toml
-      - name: Unit tests and types
-        run: |
-          npx vitest run
-          npx tsc --noEmit -p .
-      - run: npm run core && npm run build
+      - name: Unit tests
+        run: npx vitest run
+      - name: Types and build
+        run: npm run core && npm run build
       - id: playwright
         run: echo "version=$(node -p "require('@playwright/test/package.json').version")" >> "$GITHUB_OUTPUT"
       - uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
