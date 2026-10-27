@@ -1,3 +1,4 @@
+import { execSync } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { readFileSync, readdirSync } from 'node:fs';
 import { resolve } from 'node:path';
@@ -5,6 +6,18 @@ import type { Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import wasm from 'vite-plugin-wasm';
 import { VitePWA } from 'vite-plugin-pwa';
+
+// The version shown in the panel footer (index.html reads it as
+// %VITE_APP_VERSION%): the tag on a release build, else what git describes.
+function appVersion(): string {
+  if (process.env.GITHUB_REF_TYPE === 'tag' && process.env.GITHUB_REF_NAME) return process.env.GITHUB_REF_NAME;
+  try {
+    return execSync('git describe --tags --always', { cwd: import.meta.dirname, stdio: ['ignore', 'pipe', 'ignore'] }).toString().trim();
+  } catch {
+    return 'dev';
+  }
+}
+process.env.VITE_APP_VERSION ??= appVersion();
 
 const mediapipeDir = resolve(import.meta.dirname, 'node_modules/@mediapipe/tasks-vision/wasm');
 // The classic (non-module) builds: SIMD for every current browser, and the
